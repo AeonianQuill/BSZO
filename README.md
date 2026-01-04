@@ -1,11 +1,11 @@
 # BSZO: Bayesian Subspace Zeroth-Order Optimizer
 
-A memory-efficient zeroth-order optimizer for LLM fine-tuning.
+A derivative-free optimization method for LLMs based on Bayesian inference in subspace, achieving strong performance with low memory cost.
 
 ## Features
 
 - Bayesian gradient estimation in random k-dim subspace
-- Memory efficient: O(k) instead of O(n)
+- Memory efficient: O(n + k^2)
 - Supports OPT, RoBERTa-large, Mistral models
 
 ## Installation
@@ -59,6 +59,5 @@ python run.py \
 | `--bayesian_num_samples` | Samples per step | 3 |
 | `--bayesian_one_sided` | One-sided difference | True |
 
-## Scripts
-
-See `scripts/` for experiment configurations.
+## Others
+More will be added soon.
