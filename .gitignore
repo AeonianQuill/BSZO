@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Backup files
+beifen.py
+newuoas_optimizer_v3 copy.py
+test.txt
+
+# Unused directories
+debug/
+sweeps/
+tools/
+modeling_mistral/
+gradient_pruning/
+
+# Head Tuning only (not needed for full fine-tuning)
+modeling_opt.py
+modeling_llama.py
+
+# Other tuning methods (not needed)
+lora.py
+prefix_tuning.py
+prompt_tuning.py
+
+# Results and cache
+result/
+wandb/
+*.log
+.wandb/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
