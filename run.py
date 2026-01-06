@@ -37,12 +37,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Only register custom Mistral if not already in transformers (for older versions)
-try:
-    AutoConfig.register("mistral", MistralConfig)
-    AutoModelForCausalLM.register(MistralConfig, MistralForCausalLM)
-except ValueError:
-    # Already registered in newer transformers versions
-    pass
+# Commented out: newer transformers versions have Mistral built-in
+# try:
+#     AutoConfig.register("mistral", MistralConfig)
+#     AutoModelForCausalLM.register(MistralConfig, MistralForCausalLM)
+# except ValueError:
+#     # Already registered in newer transformers versions
+#     pass
 
 
 @dataclass

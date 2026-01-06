@@ -36,17 +36,13 @@ SAVE_STEPS=500
 ZO_EPS="1e-4"
 
 # All datasets to run
-DATASETS=("SST2" "BoolQ" "RTE" "CB" "WIC" "TREC")
-
-# Run IDs for repeated runs (seed not set, only train_set_seed=0 fixed)
-RUN_IDS=(1 2)
+DATASETS=("SST2" "RTE" "CB" "WIC" "TREC")
 
 # Dataset-specific parameters (num_train, num_dev)
 get_data_params() {
     local task=$1
     case $task in
         SST2)   echo "1000 500" ;;
-        BoolQ)  echo "1000 500" ;;
         RTE)    echo "1000 500" ;;
         CB)     echo "200 50" ;;
         WIC)    echo "1000 500" ;;
@@ -60,7 +56,6 @@ get_num_eval() {
     local task=$1
     case $task in
         SST2)   echo 1000 ;;
-        BoolQ)  echo 1000 ;;
         RTE)    echo 277 ;;
         CB)     echo 56 ;;
         WIC)    echo 1000 ;;
@@ -70,70 +65,49 @@ get_num_eval() {
 }
 
 # =============================================================================
-# Best learning rates from experiments (eps=1e-4 for all)
+# Learning rates to run (excluding already completed ones)
+# Full grid: [1e-4, 1e-5, 1e-6, 1e-7]
+# Each method x dataset has one LR already done, run the other 3
 # =============================================================================
-get_best_lr_zo_sgd() {
+
+# ZO-SGD: already ran 1e-6 for all tasks
+get_lrs_zo_sgd() {
+    local task=$1
+    # All tasks already ran 1e-6
+    echo "1e-4 1e-5 1e-7"
+}
+
+# ZO-Adam: SST2/RTE/WIC/TREC=1e-5, CB=1e-4
+get_lrs_zo_adam() {
     local task=$1
     case $task in
-        SST2)   echo "1e-6" ;;
-        BoolQ)  echo "1e-4" ;;
-        RTE)    echo "1e-6" ;;
-        CB)     echo "1e-6" ;;
-        WIC)    echo "1e-6" ;;
-        TREC)   echo "1e-6" ;;
-        *)      echo "1e-6" ;;
+        CB)     echo "1e-5 1e-6 1e-7" ;;  # exclude 1e-4
+        *)      echo "1e-4 1e-6 1e-7" ;;  # exclude 1e-5
     esac
 }
 
-get_best_lr_zo_adam() {
+# HiZOO: already ran 1e-6 for all tasks
+get_lrs_hizoo() {
+    local task=$1
+    # All tasks already ran 1e-6
+    echo "1e-4 1e-6 1e-5 1e-7"
+}
+
+# V3: SST2/RTE/CB/WIC=1e-6, TREC=1e-5
+get_lrs_v3() {
     local task=$1
     case $task in
-        SST2)   echo "1e-5" ;;
-        BoolQ)  echo "1e-4" ;;
-        RTE)    echo "1e-5" ;;
-        CB)     echo "1e-4" ;;
-        WIC)    echo "1e-5" ;;
-        TREC)   echo "1e-5" ;;
-        *)      echo "1e-5" ;;
+        TREC)   echo "1e-4 1e-6 1e-7" ;;  # exclude 1e-5
+        *)      echo "1e-4 1e-5 1e-7" ;;  # exclude 1e-6
     esac
 }
 
-get_best_lr_hizoo() {
+# V4: SST2/RTE/CB/WIC=1e-6, TREC=1e-5
+get_lrs_v4() {
     local task=$1
     case $task in
-        SST2)   echo "1e-6" ;;
-        BoolQ)  echo "1e-4" ;;
-        RTE)    echo "1e-6" ;;
-        CB)     echo "1e-6" ;;
-        WIC)    echo "1e-6" ;;
-        TREC)   echo "1e-6" ;;
-        *)      echo "1e-6" ;;
-    esac
-}
-
-get_best_lr_v3() {
-    local task=$1
-    case $task in
-        SST2)   echo "1e-6" ;;
-        BoolQ)  echo "1e-4" ;;
-        RTE)    echo "1e-6" ;;
-        CB)     echo "1e-6" ;;
-        WIC)    echo "1e-6" ;;
-        TREC)   echo "1e-5" ;;
-        *)      echo "1e-6" ;;
-    esac
-}
-
-get_best_lr_v4() {
-    local task=$1
-    case $task in
-        SST2)   echo "1e-6" ;;
-        BoolQ)  echo "1e-4" ;;
-        RTE)    echo "1e-6" ;;
-        CB)     echo "1e-6" ;;
-        WIC)    echo "1e-6" ;;
-        TREC)   echo "1e-5" ;;
-        *)      echo "1e-6" ;;
+        TREC)   echo "1e-4 1e-6 1e-7" ;;  # exclude 1e-5
+        *)      echo "1e-4 1e-5 1e-7" ;;  # exclude 1e-6
     esac
 }
 
@@ -142,24 +116,24 @@ get_best_lr_v4() {
 # =============================================================================
 run_zo_sgd() {
     local TASK=$1
-    local LR=$(get_best_lr_zo_sgd $TASK)
+    local LRS=$(get_lrs_zo_sgd $TASK)  # Pass TASK to get remaining LRs
     local TASK_LOWER=$(echo "$TASK" | tr '[:upper:]' '[:lower:]')
 
     # Get dataset-specific parameters
     read NUM_TRAIN NUM_DEV <<< $(get_data_params $TASK)
 
-    for run_id in "${RUN_IDS[@]}"; do
+    for LR in ${LRS}; do
         echo "======================================"
-        echo "Running ZO-SGD on ${TASK} with lr=${LR}, run=${run_id}"
+        echo "Running ZO-SGD on ${TASK} with lr=${LR}"
         echo "NUM_TRAIN=${NUM_TRAIN}, NUM_DEV=${NUM_DEV}"
         echo "======================================"
 
-        export WANDB_PROJECT="roberta_best_lr_${TASK_LOWER}"
+        export WANDB_PROJECT="roberta_grid_${TASK_LOWER}"
 
         python run.py \
             --model_name=${MODEL_NAME} \
             --task_name=${TASK} \
-            --output_dir=result/roberta_zo_sgd_${TASK}_lr${LR}_run${run_id} \
+            --output_dir=result/roberta_zo_sgd_${TASK}_lr${LR} \
             --num_train_epochs=5 \
             --per_device_train_batch_size=${BATCH_SIZE} \
             --load_best_model_at_end \
@@ -184,6 +158,8 @@ run_zo_sgd() {
             --zo_eps=${ZO_EPS} \
             --weight_decay=0 \
             --use_roberta_mlm
+
+        echo "[ZO-SGD] ${TASK} lr=${LR} completed!"
     done
 }
 
@@ -192,24 +168,24 @@ run_zo_sgd() {
 # =============================================================================
 run_zo_adam() {
     local TASK=$1
-    local LR=$(get_best_lr_zo_adam $TASK)
+    local LRS=$(get_lrs_zo_adam $TASK)
     local TASK_LOWER=$(echo "$TASK" | tr '[:upper:]' '[:lower:]')
 
     # Get dataset-specific parameters
     read NUM_TRAIN NUM_DEV <<< $(get_data_params $TASK)
 
-    for run_id in "${RUN_IDS[@]}"; do
+    for LR in ${LRS}; do
         echo "======================================"
-        echo "Running ZO-Adam on ${TASK} with lr=${LR}, run=${run_id}"
+        echo "Running ZO-Adam on ${TASK} with lr=${LR}"
         echo "NUM_TRAIN=${NUM_TRAIN}, NUM_DEV=${NUM_DEV}"
         echo "======================================"
 
-        export WANDB_PROJECT="roberta_best_lr_${TASK_LOWER}"
+        export WANDB_PROJECT="roberta_grid_${TASK_LOWER}"
 
         python run.py \
             --model_name=${MODEL_NAME} \
             --task_name=${TASK} \
-            --output_dir=result/roberta_zo_adam_${TASK}_lr${LR}_run${run_id} \
+            --output_dir=result/roberta_zo_adam_${TASK}_lr${LR} \
             --num_train_epochs=5 \
             --per_device_train_batch_size=${BATCH_SIZE} \
             --load_best_model_at_end \
@@ -234,6 +210,8 @@ run_zo_adam() {
             --zo_eps=${ZO_EPS} \
             --weight_decay=0 \
             --use_roberta_mlm
+
+        echo "[ZO-Adam] ${TASK} lr=${LR} completed!"
     done
 }
 
@@ -242,24 +220,24 @@ run_zo_adam() {
 # =============================================================================
 run_hizoo() {
     local TASK=$1
-    local LR=$(get_best_lr_hizoo $TASK)
+    local LRS=$(get_lrs_hizoo $TASK)
     local TASK_LOWER=$(echo "$TASK" | tr '[:upper:]' '[:lower:]')
 
     # Get dataset-specific parameters
     read NUM_TRAIN NUM_DEV <<< $(get_data_params $TASK)
 
-    for run_id in "${RUN_IDS[@]}"; do
+    for LR in ${LRS}; do
         echo "======================================"
-        echo "Running HiZOO on ${TASK} with lr=${LR}, run=${run_id}"
+        echo "Running HiZOO on ${TASK} with lr=${LR}"
         echo "NUM_TRAIN=${NUM_TRAIN}, NUM_DEV=${NUM_DEV}"
         echo "======================================"
 
-        export WANDB_PROJECT="roberta_best_lr_${TASK_LOWER}"
+        export WANDB_PROJECT="roberta_grid_${TASK_LOWER}"
 
         python run.py \
             --model_name=${MODEL_NAME} \
             --task_name=${TASK} \
-            --output_dir=result/roberta_hizoo_${TASK}_lr${LR}_run${run_id} \
+            --output_dir=result/roberta_hizoo_${TASK}_lr${LR} \
             --num_train_epochs=5 \
             --per_device_train_batch_size=${BATCH_SIZE} \
             --load_best_model_at_end \
@@ -283,6 +261,8 @@ run_hizoo() {
             --zo_eps=${ZO_EPS} \
             --weight_decay=0 \
             --use_roberta_mlm
+
+        echo "[HiZOO] ${TASK} lr=${LR} completed!"
     done
 }
 
@@ -291,24 +271,24 @@ run_hizoo() {
 # =============================================================================
 run_bszo_v3() {
     local TASK=$1
-    local LR=$(get_best_lr_v3 $TASK)
+    local LRS=$(get_lrs_v3 $TASK)  # Pass TASK to get remaining LRs
     local TASK_LOWER=$(echo "$TASK" | tr '[:upper:]' '[:lower:]')
 
     # Get dataset-specific parameters
     read NUM_TRAIN NUM_DEV <<< $(get_data_params $TASK)
 
-    for run_id in "${RUN_IDS[@]}"; do
+    for LR in ${LRS}; do
         echo "======================================"
-        echo "Running BSZO-V3 on ${TASK} with lr=${LR}, run=${run_id}"
+        echo "Running BSZO-V3 on ${TASK} with lr=${LR}"
         echo "NUM_TRAIN=${NUM_TRAIN}, NUM_DEV=${NUM_DEV}"
         echo "======================================"
 
-        export WANDB_PROJECT="roberta_best_lr_${TASK_LOWER}"
+        export WANDB_PROJECT="roberta_grid_${TASK_LOWER}"
 
         python run.py \
             --model_name=${MODEL_NAME} \
             --task_name=${TASK} \
-            --output_dir=result/roberta_v3_${TASK}_lr${LR}_run${run_id} \
+            --output_dir=result/roberta_v3_${TASK}_lr${LR} \
             --num_train_epochs=5 \
             --per_device_train_batch_size=${BATCH_SIZE} \
             --load_best_model_at_end \
@@ -336,6 +316,8 @@ run_bszo_v3() {
             --bayesian_one_sided=True \
             --weight_decay=0 \
             --use_roberta_mlm
+
+        echo "[BSZO-V3] ${TASK} lr=${LR} completed!"
     done
 }
 
@@ -344,24 +326,24 @@ run_bszo_v3() {
 # =============================================================================
 run_bszo_v4() {
     local TASK=$1
-    local LR=$(get_best_lr_v4 $TASK)
+    local LRS=$(get_lrs_v4 $TASK)  # Pass TASK to get remaining LRs
     local TASK_LOWER=$(echo "$TASK" | tr '[:upper:]' '[:lower:]')
 
     # Get dataset-specific parameters
     read NUM_TRAIN NUM_DEV <<< $(get_data_params $TASK)
 
-    for run_id in "${RUN_IDS[@]}"; do
+    for LR in ${LRS}; do
         echo "======================================"
-        echo "Running BSZO-V4 on ${TASK} with lr=${LR}, run=${run_id}"
+        echo "Running BSZO-V4 on ${TASK} with lr=${LR}"
         echo "NUM_TRAIN=${NUM_TRAIN}, NUM_DEV=${NUM_DEV}"
         echo "======================================"
 
-        export WANDB_PROJECT="roberta_best_lr_${TASK_LOWER}"
+        export WANDB_PROJECT="roberta_grid_${TASK_LOWER}"
 
         python run.py \
             --model_name=${MODEL_NAME} \
             --task_name=${TASK} \
-            --output_dir=result/roberta_v4_${TASK}_lr${LR}_run${run_id} \
+            --output_dir=result/roberta_v4_${TASK}_lr${LR} \
             --num_train_epochs=5 \
             --per_device_train_batch_size=${BATCH_SIZE} \
             --load_best_model_at_end \
@@ -389,6 +371,8 @@ run_bszo_v4() {
             --bayesian_one_sided=True \
             --weight_decay=0 \
             --use_roberta_mlm
+
+        echo "[BSZO-V4] ${TASK} lr=${LR} completed!"
     done
 }
 

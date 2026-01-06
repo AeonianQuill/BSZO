@@ -478,7 +478,9 @@ class OurTrainer(Trainer):
             self.optimizer = SGD(self.model.parameters(), lr=args.learning_rate, momentum=args.momentum)
             assert args.lr_scheduler_type == 'constant', "we did not implement lr_schedule."
             # HiZOO specific parameters
-            self.hizoo_smooth = getattr(args, 'hizoo_smooth', 1e-8)  # Hessian smooth coefficient (alpha)
+            # Note: official uses smooth=1e-8 with eps=1e-3
+            # For eps=1e-4, need smooth=1e-10 to match (smooth/eps² ratio)
+            self.hizoo_smooth = getattr(args, 'hizoo_smooth', 1e-10)  # Hessian smooth coefficient (alpha)
             self.hizoo_eps = getattr(args, 'hizoo_eps', 1e-8)  # Epsilon for numerical stability
             self.hizoo_v = {}  # Hessian diagonal (per parameter)
             self.hizoo_step_count = 0
@@ -1430,12 +1432,12 @@ class OurTrainer(Trainer):
         """
         args = self.args
 
-        # Initialize step counter and v dict if not exists (matches official)
-        if not hasattr(self, 'lozo_step_count'):
-            self.lozo_step_count = 0
-            self.lozo_v = {}
-        else:
+        # Initialize step counter and v dict (matches official: only init once)
+        if hasattr(self, 'lozo_step_count'):
             self.lozo_step_count += 1
+        else:
+            self.lozo_step_count = 0
+            self.lozo_v = {}  # Only initialize once, not every step
 
         # Refresh named_parameters_to_optim (matches official)
         self.named_parameters_to_optim = []
