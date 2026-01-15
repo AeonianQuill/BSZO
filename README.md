@@ -1,6 +1,6 @@
-# BSZO: Bayesian Subspace Zeroth-Order Optimizer
+# Robust and Efficient Zeroth-Order LLM Fine-Tuning via Adaptive Bayesian Subspace Optimizer
 
-A derivative-free optimization method for LLMs based on Bayesian inference in subspace, achieving strong performance with low memory cost.
+A derivative-free optimization method for LLMs based on Bayesian inference in subspace, achieving strong performance and great robust with low memory cost.
 
 ## Features
 
