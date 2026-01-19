@@ -60,4 +60,4 @@ python run.py \
 | `--bayesian_one_sided` | One-sided difference | True |
 
 ## Others
-See for more details. More will be added soon.
+See https://arxiv.org/abs/2601.01452 for more details. More will be added soon.
